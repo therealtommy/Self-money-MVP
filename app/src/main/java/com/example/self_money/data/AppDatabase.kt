@@ -1,3 +1,5 @@
+package com.example.self_money.data
+
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
