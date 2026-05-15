@@ -1,5 +1,6 @@
 package com.example.self_money
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -28,8 +29,13 @@ class MainActivity : AppCompatActivity() {
         observeData()
 
         binding.fabAdd.setOnClickListener {
-            android.widget.Toast.makeText(this, "Добавить операцию", android.widget.Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, AddOperationActivity::class.java)
+            startActivity(intent)
         }
+    }
+    override fun onResume() {
+        super.onResume()
+        viewModel.loadData()
     }
 
     private fun setupRecyclerView() {
