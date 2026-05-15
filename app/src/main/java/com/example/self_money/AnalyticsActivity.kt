@@ -1,21 +1,23 @@
 package com.example.self_money
 
 import android.os.Bundle
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.self_money.databinding.ActivityAnalyticsBinding
 import com.example.self_money.repository.FinanceRepository
 import com.example.self_money.ui.viewmodel.AnalyticsViewModel
 import com.example.self_money.ui.viewmodel.AnalyticsViewModelFactory
-import java.text.SimpleDateFormat
+import kotlinx.coroutines.launch
 import java.util.*
 
 class AnalyticsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAnalyticsBinding
     private lateinit var viewModel: AnalyticsViewModel
+    private lateinit var repository: FinanceRepository
+    private var categoryMap: Map<Long, String> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,11 +27,12 @@ class AnalyticsActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        val repository = FinanceRepository(applicationContext)
+        repository = FinanceRepository(applicationContext)
         val factory = AnalyticsViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory)[AnalyticsViewModel::class.java]
 
         setupObservers()
+        loadCategoryMap()
 
         // Загружаем данные за текущий месяц
         val calendar = Calendar.getInstance()
@@ -39,6 +42,15 @@ class AnalyticsActivity : AppCompatActivity() {
         viewModel.loadAnalytics(startDate, endDate)
     }
 
+    private fun loadCategoryMap() {
+        lifecycleScope.launch {
+            val categories = repository.getAllCategories()
+            categoryMap = categories.associate { it.id to it.name }
+            // После загрузки мапы обновляем отображение категорий (если данные уже пришли)
+            updateCategoriesDisplay()
+        }
+    }
+
     private fun setupObservers() {
         viewModel.totalIncome.observe(this) { income ->
             binding.tvTotalIncome.text = String.format("%.2f ₽", income)
@@ -46,11 +58,14 @@ class AnalyticsActivity : AppCompatActivity() {
         viewModel.totalExpense.observe(this) { expense ->
             binding.tvTotalExpense.text = String.format("%.2f ₽", expense)
         }
+        viewModel.expensesByCategory.observe(this) { expensesMap ->
+            // Сохраняем данные, обновляем UI, если мапа уже загружена
+            if (categoryMap.isNotEmpty()) {
+                displayCategories(expensesMap)
+            }
+        }
         viewModel.advice.observe(this) { advice ->
             binding.tvAdvice.text = advice
-        }
-        viewModel.expensesByCategory.observe(this) { expensesMap ->
-            displayCategories(expensesMap)
         }
     }
 
@@ -64,8 +79,9 @@ class AnalyticsActivity : AppCompatActivity() {
         }
         // Сортируем по убыванию суммы
         val sorted = expensesMap.toList().sortedByDescending { (_, value) -> value }
-        for ((categoryId, amount) in sorted) {
-            val categoryName = getCategoryNameById(categoryId.toLong())
+        for ((categoryIdStr, amount) in sorted) {
+            val categoryId = categoryIdStr.toLongOrNull() ?: continue
+            val categoryName = categoryMap[categoryId] ?: "Категория $categoryId"
             val tv = TextView(this)
             tv.text = String.format("%s: %.2f ₽", categoryName, amount)
             tv.setPadding(0, 8, 0, 8)
@@ -73,12 +89,11 @@ class AnalyticsActivity : AppCompatActivity() {
         }
     }
 
-    private fun getCategoryNameById(categoryId: Long): String {
-        // Можно сделать запрос к репозиторию, но для простоты пока вернём ID
-        // Для правильной работы нужно передать мапу категорий из репозитория.
-        // Это можно улучшить, добавив поле categoryMap в ViewModel.
-        // Пока упростим: покажем ID, но затем вы можете доработать.
-        return "Категория $categoryId"
+    private fun updateCategoriesDisplay() {
+        val expensesMap = viewModel.expensesByCategory.value ?: emptyMap()
+        if (expensesMap.isNotEmpty()) {
+            displayCategories(expensesMap)
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
