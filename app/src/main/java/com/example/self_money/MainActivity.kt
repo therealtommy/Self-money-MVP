@@ -41,6 +41,9 @@ class MainActivity : AppCompatActivity() {
         binding.btnViewAll.setOnClickListener {
             startActivity(Intent(this, OperationsListActivity::class.java))
         }
+        binding.btnAnalytics.setOnClickListener {
+            startActivity(Intent(this, AnalyticsActivity::class.java))
+        }
     }
 
     override fun onResume() {

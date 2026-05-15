@@ -24,6 +24,7 @@
         </activity>
         <activity android:name=".AddOperationActivity" />
         <activity android:name=".OperationsListActivity" />
+        <activity android:name=".AnalyticsActivity" />
     </application>
 
 </manifest>
