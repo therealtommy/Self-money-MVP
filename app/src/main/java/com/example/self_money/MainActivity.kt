@@ -10,6 +10,7 @@ import com.example.self_money.repository.FinanceRepository
 import com.example.self_money.ui.OperationAdapter
 import com.example.self_money.ui.ui.viewmodel.MainViewModel
 import com.example.self_money.ui.ui.viewmodel.MainViewModelFactory
+import com.example.self_money.OperationsListActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -28,9 +29,13 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         observeData()
 
+
         binding.fabAdd.setOnClickListener {
             val intent = Intent(this, AddOperationActivity::class.java)
             startActivity(intent)
+        }
+        binding.btnViewAll.setOnClickListener {
+            startActivity(Intent(this, OperationsListActivity::class.java))
         }
     }
     override fun onResume() {
