@@ -3,6 +3,7 @@ package com.example.self_money.data.dao
 
 import androidx.room.*
 import com.example.self_money.data.entity.Category
+import com.example.self_money.data.entity.Account
 
 @Dao
 interface CategoryDao {
@@ -16,7 +17,7 @@ interface CategoryDao {
     suspend fun delete(category: Category)
 
     @Query("SELECT * FROM categories ORDER BY name")
-    suspend fun getAll(): List<Category>
+    suspend fun getAll(): List<Category>   // только для категорий
 
     @Query("SELECT * FROM categories WHERE id = :id")
     suspend fun getById(id: Long): Category?

@@ -3,6 +3,8 @@ package com.example.self_money.repository
 
 import android.content.Context
 import com.example.self_money.data.AppDatabase
+import com.example.self_money.data.entity.Account
+import com.example.self_money.data.entity.Category
 import com.example.self_money.data.entity.Operation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -13,6 +15,9 @@ class FinanceRepository(context: Context) {
     private val operationDao = db.operationDao()
     private val accountDao = db.accountDao()
     private val categoryDao = db.categoryDao()
+
+    suspend fun getAllCategories(): List<Category> = db.categoryDao().getAll()
+    suspend fun getAllAccounts(): List<Account> = db.accountDao().getAll()
 
     suspend fun insertOperation(operation: Operation) = operationDao.insert(operation)
 

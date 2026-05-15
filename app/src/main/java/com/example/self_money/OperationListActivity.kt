@@ -2,19 +2,22 @@ package com.example.self_money
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.self_money.data.entity.Operation
 import com.example.self_money.databinding.ActivityOperationsListBinding
 import com.example.self_money.repository.FinanceRepository
 import com.example.self_money.ui.OperationsListAdapter
 import com.example.self_money.ui.ui.viewmodel.OperationsListViewModel
 import com.example.self_money.ui.ui.viewmodel.OperationsListViewModelFactory
-import java.text.SimpleDateFormat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 
 class OperationsListActivity : AppCompatActivity() {
@@ -22,6 +25,9 @@ class OperationsListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityOperationsListBinding
     private lateinit var viewModel: OperationsListViewModel
     private lateinit var adapter: OperationsListAdapter
+
+    private var categoryMap: Map<Long, String> = emptyMap()
+    private var accountMap: Map<Long, String> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +41,10 @@ class OperationsListActivity : AppCompatActivity() {
         val factory = OperationsListViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory)[OperationsListViewModel::class.java]
 
-        setupRecyclerView()
+        // Сначала загружаем мапы синхронно (дожидаемся)
+        loadMapsBlocking()
+
+        setupRecyclerView() // теперь мапы уже заполнены
         setupFilters()
         setupSearch()
 
@@ -51,10 +60,25 @@ class OperationsListActivity : AppCompatActivity() {
         viewModel.loadOperationsForPeriod(startDate, endDate)
     }
 
+    // Блокирующая загрузка мап (но не в UI-потоке)
+    private fun loadMapsBlocking() {
+        lifecycleScope.launch {
+            val (categories, accounts) = withContext(Dispatchers.IO) {
+                val repository = FinanceRepository(applicationContext)
+                Pair(repository.getAllCategories(), repository.getAllAccounts())
+            }
+            categoryMap = categories.associate { it.id to it.name }
+            accountMap = accounts.associate { it.id to it.name }
+            // После загрузки мап, если адаптер уже создан, обновляем его
+            if (::adapter.isInitialized) {
+                adapter.notifyDataSetChanged()
+            }
+        }
+    }
+
     private fun setupRecyclerView() {
         adapter = OperationsListAdapter(
             onItemClick = { operation ->
-                // Редактирование – можно открыть AddOperationActivity в режиме редактирования
                 val intent = Intent(this, AddOperationActivity::class.java)
                 intent.putExtra("operation_id", operation.id)
                 startActivity(intent)
@@ -69,7 +93,9 @@ class OperationsListActivity : AppCompatActivity() {
                     }
                     .setNegativeButton("Отмена", null)
                     .show()
-            }
+            },
+            getCategoryName = { categoryId -> categoryMap[categoryId] ?: "ID:$categoryId" },
+            getAccountName = { accountId -> accountMap[accountId] ?: "ID:$accountId" }
         )
         binding.rvOperations.layoutManager = LinearLayoutManager(this)
         binding.rvOperations.adapter = adapter
@@ -77,9 +103,9 @@ class OperationsListActivity : AppCompatActivity() {
 
     private fun setupFilters() {
         val periods = arrayOf("Последние 7 дней", "Последние 30 дней", "Весь период")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, periods)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerPeriod.adapter = adapter
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, periods)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerPeriod.adapter = spinnerAdapter
 
         binding.btnApplyFilter.setOnClickListener {
             val position = binding.spinnerPeriod.selectedItemPosition
@@ -107,7 +133,6 @@ class OperationsListActivity : AppCompatActivity() {
                 viewModel.setSearchQuery(query ?: "")
                 return true
             }
-
             override fun onQueryTextChange(newText: String?): Boolean {
                 viewModel.setSearchQuery(newText ?: "")
                 return true
@@ -122,7 +147,9 @@ class OperationsListActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Обновляем список, если вернулись с редактирования
+        // Обновляем список при возврате
         binding.btnApplyFilter.performClick()
+        // Перезагружаем мапы (на случай если добавили новую категорию)
+        loadMapsBlocking()
     }
 }

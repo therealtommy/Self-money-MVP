@@ -12,7 +12,9 @@ import java.util.*
 
 class OperationsListAdapter(
     private val onItemClick: (Operation) -> Unit,
-    private val onItemLongClick: (Operation) -> Unit
+    private val onItemLongClick: (Operation) -> Unit,
+    private val getCategoryName: (Long) -> String,
+    private val getAccountName: (Long) -> String
 ) : ListAdapter<Operation, OperationsListAdapter.OperationViewHolder>(DiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): OperationViewHolder {
@@ -28,13 +30,13 @@ class OperationsListAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(operation: Operation) {
-            // Форматируем дату
             val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
             binding.tvDate.text = dateFormat.format(operation.date)
 
-            // Сумма с цветом
             val sign = if (operation.type == "expense") "-" else "+"
             binding.tvAmount.text = "$sign ${operation.amount} ₽"
+            binding.tvCategory.text = getCategoryName(operation.categoryId)
+            binding.tvAccount.text = getAccountName(operation.accountId)
             binding.tvAmount.setTextColor(
                 if (operation.type == "expense")
                     binding.root.context.getColor(android.R.color.holo_red_dark)
@@ -42,18 +44,12 @@ class OperationsListAdapter(
                     binding.root.context.getColor(android.R.color.holo_green_dark)
             )
 
-            // Здесь нужно будет подтянуть имя категории и счёта
-            // Пока заглушки – позже заменим на запрос из БД
-            binding.tvCategory.text = "Категория ${operation.categoryId}"
-            binding.tvAccount.text = "Счёт ${operation.accountId}"
             binding.tvComment.text = operation.comment.takeIf { it.isNotEmpty() } ?: "Без комментария"
 
-            // Клик для редактирования
             binding.root.setOnClickListener {
                 onItemClick(operation)
             }
 
-            // Длинный клик для удаления
             binding.root.setOnLongClickListener {
                 onItemLongClick(operation)
                 true

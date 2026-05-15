@@ -16,7 +16,7 @@ interface AccountDao {
     suspend fun delete(account: Account)
 
     @Query("SELECT * FROM accounts ORDER BY name")
-    suspend fun getAll(): List<Account>
+    suspend fun getAll(): List<Account>   // метод для счетов
 
     @Query("SELECT * FROM accounts WHERE id = :id")
     suspend fun getById(id: Long): Account?
