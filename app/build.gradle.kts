@@ -53,8 +53,8 @@ dependencies {
 
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
-
     implementation(libs.kotlinx.coroutines.android)
+
 
     implementation(libs.androidx.recyclerview)
 }
